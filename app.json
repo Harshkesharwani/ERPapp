@@ -2,7 +2,12 @@
   "expo": {
     "name": "ERP",
     "slug": "ERP",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "7da24f21-310c-46f4-b5ab-e9afb48e14c5"
+      }
+    }
   },
   "name": "ERP"
 }
