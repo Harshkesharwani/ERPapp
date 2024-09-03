@@ -65,11 +65,11 @@ const Login = ({ navigation }) => {
         await AsyncStorage.setItem('userProfile', JSON.stringify(result.result));
 
         if (result.result.profile_type === "student") {
-          navigation.navigate('dashboard');
+          navigation.replace('StudentStack');
         } else if (result.result.profile_type === "teacher") {
-          navigation.navigate('Teacher_dashboard');
+          navigation.replace('TeacherStack');
         } else {
-          navigation.navigate('admin');
+          navigation.replace('AdminStack');
         }
       }
       // throw new Error("Login not working");
@@ -138,11 +138,11 @@ const Login = ({ navigation }) => {
               <Text style={styles.singText2}>Forget Password</Text>
             </TouchableOpacity>
           </View>
-          <View>
+          {/* <View>
             <TouchableOpacity onPress={() => navigation.navigate('sign')}>
               <Text style={styles.singText}>Don't have any account? <Text style={styles.singText2}>Sign Up</Text></Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
