@@ -141,7 +141,7 @@ const StudentAttendancePage = () => {
             student_id: student.student_id,
             status: student.status.toLowerCase(),
         }));
-        const date = new Date().toISOString().slice(0, 10); // Format date as YYYY-MM-DD
+        const date = new Date(); // Format date as YYYY-MM-DD
         Alert.alert(
             'Confirm Save',
             'Are you sure you want to save the changes?',
