@@ -218,18 +218,20 @@ const Admin_Events = () => {
               style={styles.input}
               editable={false}
             />
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#567BC2' }]}
-              onPress={editHoliday ? handleEditHoliday : handleAddHoliday}
-            >
-              <Text style={styles.buttonText}>{editHoliday ? 'Save' : 'Add'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#e74c3c' }]}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: '#567BC2' }]}
+                onPress={editHoliday ? handleEditHoliday : handleAddHoliday}
+              >
+                <Text style={styles.buttonText}>{editHoliday ? 'Save' : 'Add'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: '#e74c3c' }]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -276,8 +278,8 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    right: wp('5%'),
-    bottom: hp('5%'),
+    right: wp('3%'),
+    bottom: hp('7%'),
     backgroundColor: '#567BC2',
     width: wp('15%'),
     height: wp('15%'),
@@ -316,6 +318,7 @@ const styles = StyleSheet.create({
     paddingVertical: hp('2%'),
     borderRadius: 5,
     marginTop: hp('1%'),
+    width: '48%',
   },
   buttonText: {
     fontSize: hp('2%'),
@@ -332,7 +335,7 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     marginTop: hp('1%'),
-    backgroundColor: '#e74c3c',
+    backgroundColor: 'red',
     padding: wp('2%'),
     borderRadius: 5,
   },

@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   approveButton: {
-    backgroundColor: '#336EFF',
+    backgroundColor: '#567BC2',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,

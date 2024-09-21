@@ -132,6 +132,8 @@ const Admin_Student = () => {
                                 },
                                 body: JSON.stringify({ "student_id": id }),
                             });
+                            const data = await response.json();
+                            console.log(data);
                             console.log(response)
                             if (response.ok) {
                                 fetchStudentsData();
@@ -200,7 +202,7 @@ const Admin_Student = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Admin Student</Text>
+            <Text style={styles.title}>Student</Text>
             <View style={styles.dropdownContainer}>
                 <TouchableOpacity onPress={() => setClassDropdownVisible(!classDropdownVisible)} style={styles.dropdownButton}>
                     <Text style={styles.dropdownButtonText}>
@@ -288,8 +290,8 @@ const Admin_Student = () => {
                         <TextInput
                             style={styles.input}
                             placeholder="Age"
-                            value={selectedStudent?.age || ''}
-                            onChangeText={(text) => setSelectedStudent({ ...selectedStudent, age: text })}
+                            value={selectedStudent?.Age || ''}
+                            onChangeText={(text) => setSelectedStudent({ ...selectedStudent, Age: text })}
                         />
                         <TextInput
                             style={styles.input}
@@ -405,7 +407,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: wp('4%'),
-        backgroundColor: '#fff',
+        backgroundColor: '#f5f5f5',
+        marginBottom: wp('10%'),
     },
     title: {
         fontSize: hp('3%'),
@@ -417,12 +420,13 @@ const styles = StyleSheet.create({
     },
     dropdownButton: {
         padding: hp('1%'),
-        backgroundColor: '#ddd',
+        backgroundColor: '#567BC2',
         borderRadius: 5,
         marginBottom: hp('1%'),
     },
     dropdownButtonText: {
         fontSize: hp('2%'),
+        color: '#fff',
     },
     dropdown: {
         backgroundColor: '#eee',
@@ -436,7 +440,7 @@ const styles = StyleSheet.create({
         paddingBottom: hp('10%'), // To avoid overlap with FAB
     },
     card: {
-        backgroundColor: '#f9f9f9',
+        backgroundColor: '#fff',
         padding: hp('2%'),
         borderRadius: 5,
         marginBottom: hp('1%'),
@@ -450,7 +454,7 @@ const styles = StyleSheet.create({
         fontSize: hp('2%'),
     },
     deleteButton: {
-        backgroundColor: '#ff6666',
+        backgroundColor: 'red',
         padding: hp('1%'),
         borderRadius: 5,
         marginTop: hp('1%'),
@@ -488,9 +492,10 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     saveButton: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: '#567BC2',
         padding: hp('1%'),
         borderRadius: 5,
+        width: '48%',
     },
     saveButtonText: {
         color: '#fff',
@@ -500,6 +505,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#ff6666',
         padding: hp('1%'),
         borderRadius: 5,
+        width: '48%',
+
     },
     cancelButtonText: {
         color: '#fff',
@@ -509,7 +516,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: hp('2%'),
         right: wp('4%'),
-        backgroundColor: '#4CAF50',
+        backgroundColor: '#567BC2',
         width: hp('7%'),
         height: hp('7%'),
         borderRadius: hp('3.5%'),

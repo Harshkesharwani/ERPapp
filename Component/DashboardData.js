@@ -71,9 +71,9 @@ export const Admin_dashboard = [
 
 // Teacher_dashboard.js
 export const Teacher_dashboard = [
-  { title: "Attendance", icon: attendance, route: "attendance" },
+  { title: "Attendance", icon: attendance, route: "Teacher_Attendence" },
   { title: "Students", icon: students, route: "Teacher_Student" },
-  { title: "Student Attendence", icon: students, route: "Teacher_Attendence" },
+  { title: "Student Attendence", icon: students, route: "TeacherStu_Attendence" },
   { title: "Enquiry", icon: enquiry, route: "Teacher_enquiry" },
   { title: "Fees", icon: fees, route: "Fees" },
   { title: "Dues", icon: dues, route: "Dues" },

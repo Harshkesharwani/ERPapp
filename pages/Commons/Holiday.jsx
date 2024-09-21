@@ -8,7 +8,9 @@ const Holiday = () => {
 
     const fetchHolidays = async () => {
         try {
-            const response = await fetch(`${url}/holidays`); // Replace with your API endpoint
+            const response = await fetch(`${url}/holidays`,{
+                method: 'POST',
+            }); // Replace with your API endpoint
             const data = await response.json();
             // console.log(data)
             setHolidays(data);
@@ -25,7 +27,7 @@ const Holiday = () => {
         <View style={styles.itemContainer}>
             <Text style={styles.holidayName}>{item.name}</Text>
             <View style={styles.detailsContainer}>
-                <Text style={styles.dateText}>{item.date} {item.month}</Text>
+                <Text style={styles.dateText}>{item.date}</Text>
                 <Text style={styles.dayOfWeek}>{item.dayOfWeek}</Text>
             </View>
         </View>

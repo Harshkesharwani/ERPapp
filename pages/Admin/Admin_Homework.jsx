@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal, TextInput, Button } from 'react-native';
 import { url } from '../../Component/Config';
+import { widthPercentageToDP } from 'react-native-responsive-screen';
 
 const Dropdown = ({ label, options, selectedValue, onValueChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -163,7 +164,7 @@ const HomeworkList = () => {
         <FlatList
           data={homeworkData}
           renderItem={renderItem}
-          keyExtractor={(item) => `${item.homework}`}
+          keyExtractor={(item) => `${item.id}`}
           style={styles.list}
         />
       )}
@@ -207,8 +208,14 @@ const HomeworkList = () => {
               value={formData.homework}
               onChangeText={(text) => setFormData({ ...formData, homework: text })}
             />
-            <Button title="Add" onPress={handleAddHomework} />
-            <Button title="Cancel" onPress={() => setModalVisible1(false)} color="red" />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity style={styles.addButton} onPress={handleAddHomework}>
+                <Text style={styles.buttonText}>Add</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteButton} onPress={() => setModalVisible1(false)}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -219,38 +226,43 @@ const HomeworkList = () => {
             <TextInput
               placeholder="Class"
               style={styles.input}
-              value={editData?.Class}
-              onChangeText={(text) => setEditData({ ...editData, Class: text })}
+              value={editData?.class}
+              onChangeText={(text) => setEditData({ ...editData, class: text })}
               editable={false}
             />
             <TextInput
               placeholder="Section"
               style={styles.input}
-              value={editData?.Section}
-              onChangeText={(text) => setEditData({ ...editData, Section: text })}
+              value={editData?.section}
+              onChangeText={(text) => setEditData({ ...editData, section: text })}
               editable={false}
             />
             <TextInput
               placeholder="Date"
               style={styles.input}
-              value={editData?.Date}
-              onChangeText={(text) => setEditData({ ...editData, Date: text })}
+              value={editData?.date}
+              onChangeText={(text) => setEditData({ ...editData, date: text })}
             />
             <TextInput
               placeholder="Subject"
               style={styles.input}
-              value={editData?.Subject}
-              onChangeText={(text) => setEditData({ ...editData, Subject: text })}
+              value={editData?.subject}
+              onChangeText={(text) => setEditData({ ...editData, subject: text })}
+              editable={false}
             />
             <TextInput
               placeholder="Homework"
               style={styles.input}
-              value={editData?.Homework}
-              onChangeText={(text) => setEditData({ ...editData, Homework: text })}
+              value={editData?.homework}
+              onChangeText={(text) => setEditData({ ...editData, homework: text })}
             />
-            <View style={{ flexDirection: 'row', alignitems: 'center', justifyContent: 'space-between', marginHorizontal: 45 }}>
-              <Button title="Update" onPress={handleEditHomework} />
-              <Button title="Cancel" onPress={() => setModalVisible2(false)} color="red" />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity onPress={handleEditHomework} style={styles.addButton}>
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setModalVisible2(false)} style={styles.deleteButton}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -264,6 +276,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: '#f8f8f8',
+    marginBottom: ('10%'),
   },
   title: {
     fontSize: 20,
@@ -320,7 +333,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 20,
-    backgroundColor: '#ff5722',
+    backgroundColor: '#567BC2',
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -358,15 +371,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
   },
-  deleteButton: {
-    marginTop: 10,
+  addButton: {
+    backgroundColor: '#567BC2',
     padding: 10,
-    backgroundColor: 'red',
     borderRadius: 5,
+    marginVertical: 5,
+    alignItems: 'center',
+
+    width: '48%',
   },
-  deleteButtonText: {
-    color: 'white',
-    textAlign: 'center',
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  deleteButton: {
+    backgroundColor: '#f44336',
+    padding: 10,
+    borderRadius: 5,
+    marginVertical: 5,
+    width: '48%',
+    alignItems: 'center',
   },
 });
 
