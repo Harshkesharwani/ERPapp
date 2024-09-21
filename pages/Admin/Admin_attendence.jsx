@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Modal, Alert, Switch } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { heightPercentageToDP as hp } from 'react-native-responsive-screen';
+import { heightPercentageToDP as hp, widthPercentageToDP } from 'react-native-responsive-screen';
 import { url } from '../../Component/Config';
 
 const AttendancePage = () => {
   const [id, setId] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [attendanceData, setAttendanceData] = useState(null);
+  const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -18,7 +19,10 @@ const AttendancePage = () => {
   const [attendanceType, setAttendanceType] = useState(true); // true for 'Full Day', false for 'Half Day'
   const [showCheckInPicker, setShowCheckInPicker] = useState(false);
   const [showCheckOutPicker, setShowCheckOutPicker] = useState(false);
-  const [newId, setNewId] = useState(''); // New state for 'Enter ID' in Add Attendance modal
+  const [newId, setNewId] = useState('');
+  const [classes, setClass] = useState('');
+  const [section, setSection] = useState('');
+
 
   const handleDayPress = async (day) => {
     const formattedDate = day.dateString;
@@ -35,12 +39,13 @@ const AttendancePage = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ student_id_or_employee_id: id, date }),
+        body: JSON.stringify({ enrollment_or_employee_id: id, date }),
       });
       const result = await response.json();
       if (response.ok) {
-        const filteredData = result.data.find(item => item.Date === date);
-        setAttendanceData(filteredData || {});
+        // const filteredData = result.data.find(item => item.Date === date);
+        console.log(result.data[0])
+        setAttendanceData(result.data[0] || {});
       } else {
         setError('Failed to fetch attendance data.');
       }
@@ -52,9 +57,9 @@ const AttendancePage = () => {
   };
 
   const handleEdit = () => {
-    setEditedCheckIn(new Date(`1970-01-01T${attendanceData["Check In Time"] || new Date().toTimeString().split(' ')[0]}`));
-    setEditedCheckOut(new Date(`1970-01-01T${attendanceData["Check Out Time"] || new Date().toTimeString().split(' ')[0]}`));
-    setAttendanceType(attendanceData["Type"] === 'Full Day');
+    setEditedCheckIn(new Date(`1970-01-01T${attendanceData["check_in_time"] || new Date().toTimeString().split(' ')[0]}`));
+    setEditedCheckOut(new Date(`1970-01-01T${attendanceData["check_out_time"] || new Date().toTimeString().split(' ')[0]}`));
+    setAttendanceType(attendanceData["type"]);
     setModalVisible(true);
   };
 
@@ -66,11 +71,12 @@ const AttendancePage = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          student_id_or_employee_id: id,
+          enrollment_or_employee_id: id,
           date: selectedDate,
           check_in_time: editedCheckIn.toTimeString().split(' ')[0],
           check_out_time: editedCheckOut.toTimeString().split(' ')[0],
           type: attendanceType ? 'Full Day' : 'Half Day',
+          status: status
         }),
       });
 
@@ -94,11 +100,12 @@ const AttendancePage = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          student_id_or_employee_id: newId, // Use newId here
+          enrollment_or_employee_id: newId, // Use newId here
           date: selectedDate,
           check_in_time: editedCheckIn.toTimeString().split(' ')[0],
           check_out_time: editedCheckOut.toTimeString().split(' ')[0],
           type: attendanceType ? 'Full Day' : 'Half Day',
+          status: status
         }),
       });
       if (response.ok) {
@@ -129,11 +136,11 @@ const AttendancePage = () => {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  student_id_or_employee_id: id,
+                  enrollment_or_employee_id: id,
                   date: selectedDate,
-                  check_in_time: attendanceData["Check In Time"],
-                  check_out_time: attendanceData["Check Out Time"],
-                  type: attendanceData["Type"],
+                  check_in_time: attendanceData["check_in_time"],
+                  check_out_time: attendanceData["check_out_time"],
+                  type: attendanceData["type"],
                 }),
               });
 
@@ -195,15 +202,16 @@ const AttendancePage = () => {
       {attendanceData && (
         <View style={styles.dayDetailsContainer}>
           <Text style={styles.dayDetailsText}>Attendance Details for {selectedDate}</Text>
-          <Text style={styles.apiText}>Attendance: {attendanceData["Type"]}</Text>
-          <Text style={styles.apiText}>Check In: {attendanceData["Check In Time"]}</Text>
-          <Text style={styles.apiText}>Check Out: {attendanceData["Check Out Time"]}</Text>
+          <Text style={styles.apiText}>Check In: {attendanceData["check_in_time"]}</Text>
+          <Text style={styles.apiText}>Check Out: {attendanceData["check_out_time"]}</Text>
+          <Text style={styles.apiText}>Status: {attendanceData["status"]}</Text>
+          <Text style={styles.apiText}>Attendance: {attendanceData["type"]}</Text>
           <View style={{ flexDirection: 'row', marginHorizontal: 75, justifyContent: 'space-between' }}>
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-              <Text style={styles.deleteButtonText}>Delete</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
               <Text style={styles.editButtonText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+              <Text style={styles.deleteButtonText}>Delete</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -227,6 +235,13 @@ const AttendancePage = () => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Edit Attendance</Text>
             <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Status"
+                value={status}
+                onChangeText={setStatus}
+                keyboardType="default"
+              />
               <Text>Check In Time:</Text>
               <TouchableOpacity onPress={() => showPicker('checkIn')}>
                 <Text>{editedCheckIn.toTimeString().split(' ')[0]}</Text>
@@ -288,6 +303,26 @@ const AttendancePage = () => {
               onChangeText={setNewId}
               keyboardType="default"
             />
+            <TextInput
+              style={styles.input}
+              placeholder="Class"
+              value={classes}
+              onChangeText={setClass}
+              keyboardType="default"
+            /><TextInput
+              style={styles.input}
+              placeholder="Section"
+              value={section}
+              onChangeText={setSection}
+              keyboardType="default"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Status"
+              value={status}
+              onChangeText={setStatus}
+              keyboardType="default"
+            />
             <View style={styles.inputContainer}>
               <Text>Check In Time:</Text>
               <TouchableOpacity onPress={() => showPicker('checkIn')}>
@@ -343,6 +378,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: '#fff',
+    marginBottom: widthPercentageToDP('10%')
   },
   input: {
     height: hp('6%'),
@@ -375,15 +411,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'red',
     padding: 10,
     borderRadius: 4,
+    width: '45%'
   },
   deleteButtonText: {
     color: '#fff',
     textAlign: 'center',
   },
   editButton: {
-    backgroundColor: 'blue',
+    backgroundColor: '#567BC2',
     padding: 10,
     borderRadius: 4,
+    width: '45%'
   },
   editButtonText: {
     color: '#fff',
@@ -396,14 +434,14 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 16,
-    right: 16,
-    width: 56,
-    height: 56,
-    backgroundColor: 'blue',
-    borderRadius: 28,
-    justifyContent: 'center',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#567BC2',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   fabIcon: {
     color: '#fff',
@@ -433,7 +471,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   saveButton: {
-    backgroundColor: 'green',
+    backgroundColor: '#567BC2',
     padding: 10,
     borderRadius: 4,
     marginTop: 16,

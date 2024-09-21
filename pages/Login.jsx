@@ -5,38 +5,6 @@ import logo from '../assets/erp.png';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { url } from '../Component/Config';
 
-const CustomDropdown = ({ selectedValue, onValueChange, options }) => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  return (
-    <View style={styles.dropdownContainer}>
-      <TouchableOpacity
-        style={styles.dropdown}
-        onPress={() => setIsDropdownOpen(!isDropdownOpen)}
-      >
-        <Text style={styles.dropdownText}>{selectedValue}</Text>
-        <Entypo name={isDropdownOpen ? "chevron-small-up" : "chevron-small-down"} size={24} color="black" />
-      </TouchableOpacity>
-      {isDropdownOpen && (
-        <View style={styles.dropdownOptions}>
-          {options.map((option, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.dropdownOption}
-              onPress={() => {
-                onValueChange(option);
-                setIsDropdownOpen(false);
-              }}
-            >
-              <Text style={styles.dropdownOptionText}>{option}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </View>
-  );
-};
-
 const Login = ({ navigation }) => {
   const [user_id, setEmail] = useState('');
   const [password, setPassword] = useState('');

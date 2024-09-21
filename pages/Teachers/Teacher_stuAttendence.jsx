@@ -1,49 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import CheckBox from '@react-native-community/checkbox'; // Import CheckBox component
+import CheckBox from '@react-native-community/checkbox';
+import { url } from '../../Component/Config';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 
 const STATUS = {
     PRESENT: 'Present',
     ABSENT: 'Absent',
-    UNKNOWN: 'Unknown', // if you want to handle cases where status is not known
 };
 
 const StudentAttendancePage = () => {
     const [attendance, setAttendance] = useState([]);
     const [classes, setClasses] = useState([]);
-    const [section, setSections]= useState([]);
+    const [sections, setSections] = useState([]);
     const [students, setStudents] = useState([]);
-    const [selectedStudent, setSelectedStudent] = useState(null);
-    const [dropdownVisible, setDropdownVisible] = useState(false);
+    const [selectedClass, setSelectedClass] = useState(null);
+    const [selectedSection, setSelectedSection] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [isClassDropdownVisible, setClassDropdownVisible] = useState(false);
+    const [isSectionDropdownVisible, setSectionDropdownVisible] = useState(false);
 
     useEffect(() => {
-    }, []);
-    
-    useEffect(() => {
         fetchUserProfile();
-        if (selectedStudent) {
-            fetchAttendanceData();
+    }, []);
+
+    useEffect(() => {
+        if (selectedClass) {
+            filterSections(selectedClass);
         }
-    }, [selectedStudent]);
+    }, [selectedClass]);
+
+    useEffect(() => {
+        if (selectedClass && selectedSection) {
+            fetchStudentList();
+        }
+    }, [selectedClass, selectedSection]);
 
     const fetchUserProfile = async () => {
         try {
             const userProfile = await AsyncStorage.getItem('userProfile');
             if (userProfile) {
                 const parsedProfile = JSON.parse(userProfile);
-                fetchStudentList(parsedProfile["Employee ID"]);
+                fetchClassSectionDetails(parsedProfile["enrollment_or_employee_id"]);
             }
         } catch (error) {
-            setError('Failed to fetch user profile');
+            console.error('Failed to fetch user profile:', error);
             setLoading(false);
         }
     };
 
-    const fetchStudentList = async (id) => {
+    const fetchClassSectionDetails = async (id) => {
+        setLoading(true);
         try {
             const response = await fetch(`${url}/teacher_class_section_details`, {
                 method: 'POST',
@@ -52,50 +60,88 @@ const StudentAttendancePage = () => {
                 },
                 body: JSON.stringify({ enrollment_or_employee_id: id }),
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
-            // console.log(data)
-            setClasses(data.class);
-            setSections(data.section);
+            if (data.Sections) {
+                const mappedClasses = data.Sections.reduce((acc, [classNumber, section]) => {
+                    let existingClass = acc.find(cls => cls.classNumber === classNumber);
+                    if (!existingClass) {
+                        existingClass = { classNumber, sections: [] };
+                        acc.push(existingClass);
+                    }
+                    existingClass.sections.push({ section_id: section, section_name: section });
+                    return acc;
+                }, []);
+                setClasses(mappedClasses);
+            } else {
+                console.log('No Classes returned from API');
+                Alert.alert('No classes found.');
+            }
+
             setLoading(false);
         } catch (error) {
-            setError('Failed to fetch student list');
+            console.error('Fetch error:', error);
+            Alert.alert('Failed to fetch class and section details');
             setLoading(false);
         }
     };
 
-    const fetchAttendanceData = async () => {
+    const filterSections = (classId) => {
+        const filteredSections = classes.find(cls => cls.classNumber === classId)?.sections || [];
+        setSections(filteredSections);
+    };
+
+    const fetchStudentList = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`${url}/student_attendance`, {
+            const response = await fetch(`${url}/student_fetch_classwise`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ student_id: selectedStudent }),
+                body: JSON.stringify({ class: selectedClass, section: selectedSection }),
             });
+
             const data = await response.json();
-            setAttendance(data);
+            console.log(data);
+            if (response.ok) {
+                const updatedStudents = data.map(student => ({
+                    ...student,
+                    status: STATUS.PRESENT,
+                }));
+                setStudents(updatedStudents);
+            } else {
+                Alert.alert('Failed to fetch student list');
+                console.error('Error:', data);
+            }
             setLoading(false);
         } catch (error) {
-            setError('Failed to fetch attendance data');
+            console.error('Fetch error:', error);
+            Alert.alert('Failed to fetch student list');
             setLoading(false);
         }
     };
 
-    const handleStudentFilter = (studentId) => {
-        setSelectedStudent(studentId);
-        setDropdownVisible(false);
-    };
-
-    const handleAttendanceChange = (date, status) => {
-        setAttendance(prevAttendance =>
-            prevAttendance.map(item =>
-                item.date === date ? { ...item, status: status === STATUS.PRESENT ? STATUS.ABSENT : STATUS.PRESENT } : item
+    const handleAttendanceChange = (studentId, newStatus) => {
+        setStudents(prevStudents =>
+            prevStudents.map(student =>
+                student.student_id === studentId
+                    ? { ...student, status: newStatus }
+                    : student
             )
         );
     };
 
     const saveAttendance = async () => {
+        const attendanceData = students.map(student => ({
+            student_id: student.student_id,
+            status: student.status.toLowerCase(),
+        }));
+        const date = new Date().toISOString().slice(0, 10); // Format date as YYYY-MM-DD
         Alert.alert(
             'Confirm Save',
             'Are you sure you want to save the changes?',
@@ -107,13 +153,14 @@ const StudentAttendancePage = () => {
                 {
                     text: 'Save',
                     onPress: async () => {
+                        console.log('Sending Attendance Data:', attendanceData);
                         try {
-                            await fetch(`${url}/save_attendance`, {
+                            await fetch(`${url}/teacher_class_attendance`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
                                 },
-                                body: JSON.stringify({ student_id: selectedStudent, attendance }),
+                                body: JSON.stringify({ class: selectedClass, section: selectedSection, date, attendance: attendanceData }),
                             });
                             Alert.alert('Success', 'Attendance saved successfully');
                         } catch (error) {
@@ -126,16 +173,20 @@ const StudentAttendancePage = () => {
         );
     };
 
-    const renderItem = ({ item }) => (
-        <View style={[styles.card, { backgroundColor: item.status === STATUS.PRESENT ? 'lightgreen' : item.status === STATUS.ABSENT ? 'lightcoral' : '#fff' }]}>
-            <Text style={styles.cardTitle}>Date: {item.date}</Text>
-            <Text style={styles.cardText}>Status: {item.status}</Text>
+    const renderStudentItem = ({ item }) => (
+        <View style={[styles.card, { backgroundColor: item.status === STATUS.PRESENT ? 'lightgreen' : 'lightcoral' }]}>
+            <Text style={styles.cardTitle}>Name: {item.student_name}</Text>
             <View style={styles.checkboxContainer}>
                 <CheckBox
                     value={item.status === STATUS.PRESENT}
-                    onValueChange={() => handleAttendanceChange(item.date, item.status)}
+                    onValueChange={() => handleAttendanceChange(item.student_id, STATUS.PRESENT)}
                 />
-                <Text style={styles.checkboxLabel}>Mark as {item.status === STATUS.PRESENT ? 'Absent' : 'Present'}</Text>
+                <Text style={styles.checkboxLabel}>Present</Text>
+                <CheckBox
+                    value={item.status === STATUS.ABSENT}
+                    onValueChange={() => handleAttendanceChange(item.student_id, STATUS.ABSENT)}
+                />
+                <Text style={styles.checkboxLabel}>Absent</Text>
             </View>
         </View>
     );
@@ -144,40 +195,85 @@ const StudentAttendancePage = () => {
         return <ActivityIndicator size="large" color="#0000ff" />;
     }
 
-    if (error) {
-        return <Text style={styles.error}>{error}</Text>;
-    }
-
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Student Attendance</Text>
-            <View style={styles.dropdownContainer}>
-                <TouchableOpacity onPress={() => setDropdownVisible(!dropdownVisible)} style={styles.dropdownButton}>
+
+            {/* Class Dropdown */}
+            <TouchableOpacity
+                onPress={() => setClassDropdownVisible(!isClassDropdownVisible)}
+                style={styles.dropdownButton}
+            >
+                <Text style={styles.dropdownButtonText}>
+                    {selectedClass ? `Class: ${selectedClass}` : 'Select Class'}
+                </Text>
+            </TouchableOpacity>
+
+            {/* Class Dropdown List */}
+            {isClassDropdownVisible && (
+                <View style={styles.dropdownList}>
+                    {classes.map(cls => (
+                        <TouchableOpacity
+                            key={cls.classNumber}
+                            onPress={() => {
+                                setSelectedClass(cls.classNumber);
+                                setClassDropdownVisible(false);
+                            }}
+                            style={styles.dropdownListItem}
+                        >
+                            <Text style={styles.dropdownListItemText}>{cls.classNumber}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
+
+            {/* Section Dropdown */}
+            {selectedClass && (
+                <TouchableOpacity
+                    onPress={() => setSectionDropdownVisible(!isSectionDropdownVisible)}
+                    style={styles.dropdownButton}
+                >
                     <Text style={styles.dropdownButtonText}>
-                        Filter by Student: {selectedStudent ? selectedStudent : 'All'}
+                        {selectedSection ? `Section: ${selectedSection}` : 'Select Section'}
                     </Text>
                 </TouchableOpacity>
-                {dropdownVisible && (
-                    <View style={styles.dropdown}>
-                        <TouchableOpacity onPress={() => handleStudentFilter(null)} style={styles.dropdownItem}>
-                            <Text>All</Text>
+            )}
+
+            {/* Section Dropdown List */}
+            {isSectionDropdownVisible && (
+                <View style={styles.dropdownList}>
+                    {sections.map(section => (
+                        <TouchableOpacity
+                            key={section.section_id}
+                            onPress={() => {
+                                setSelectedSection(section.section_id);
+                                setSectionDropdownVisible(false);
+                            }}
+                            style={styles.dropdownListItem}
+                        >
+                            <Text style={styles.dropdownListItemText}>{section.section_name}</Text>
                         </TouchableOpacity>
-                        {students.map((student, index) => (
-                            <TouchableOpacity key={index} onPress={() => handleStudentFilter(student.student_id)} style={styles.dropdownItem}>
-                                <Text>{student.student_name}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-            </View>
-            <FlatList
-                data={attendance}
-                renderItem={renderItem}
-                keyExtractor={(item) => `${item.student_id}-${item.date}`}
-            />
-            <TouchableOpacity onPress={saveAttendance} style={styles.saveButton}>
-                <Text style={styles.saveButtonText}>Save Attendance</Text>
-            </TouchableOpacity>
+                    ))}
+                </View>
+            )}
+
+            {students.length > 0 ? (
+                <>
+                    <FlatList
+                        data={students}
+                        renderItem={renderStudentItem}
+                        keyExtractor={item => item.student_id.toString()}
+                    />
+                    <TouchableOpacity
+                        onPress={saveAttendance}
+                        style={styles.saveButton}
+                    >
+                        <Text style={styles.saveButtonText}>Save Attendance</Text>
+                    </TouchableOpacity>
+                </>
+            ) : (
+                <Text style={styles.noDataText}>No Students to Display</Text>
+            )}
         </View>
     );
 };
@@ -185,73 +281,78 @@ const StudentAttendancePage = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: wp('4%'),
+        padding: 20,
+        marginBottom: 20,
     },
     title: {
-        fontSize: hp('3%'),
+        fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: hp('2%'),
-    },
-    dropdownContainer: {
-        marginBottom: hp('2%'),
+        marginBottom: 20,
+        textAlign: 'center',
     },
     dropdownButton: {
-        padding: wp('3%'),
-        backgroundColor: '#f0f0f0',
+        padding: 15,
+        borderWidth: 1,
+        borderColor: 'gray',
         borderRadius: 5,
-        marginBottom: hp('1%'),
+        marginBottom: 10,
+        alignItems: 'center',
     },
     dropdownButtonText: {
-        fontSize: hp('2%'),
+        fontSize: 16,
     },
-    dropdown: {
-        backgroundColor: '#fff',
-        borderRadius: 5,
+    dropdownList: {
+        // position: 'absolute',
         borderWidth: 1,
-        borderColor: '#ccc',
+        borderColor: 'gray',
+        borderRadius: 5,
+        marginBottom: 10,
+        backgroundColor: 'white',
     },
-    dropdownItem: {
-        padding: wp('3%'),
+    dropdownListItem: {
+        padding: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: 'lightgray',
+    },
+    dropdownListItemText: {
+        fontSize: 16,
     },
     card: {
-        borderRadius: 5,
-        padding: wp('4%'),
-        marginBottom: hp('2%'),
-        borderWidth: 1,
-        borderColor: '#ccc',
+        padding: 20,
+        borderRadius: 10,
+        marginVertical: 10,
     },
     cardTitle: {
-        fontSize: hp('2.5%'),
+        fontSize: 18,
         fontWeight: 'bold',
-    },
-    cardText: {
-        fontSize: hp('2%'),
-        marginVertical: hp('0.5%'),
     },
     checkboxContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: hp('1%'),
+        marginTop: 10,
     },
     checkboxLabel: {
-        marginLeft: wp('2%'),
-        fontSize: hp('2%'),
+        fontSize: 16,
+        marginLeft: 8,
+        marginRight: 16,
     },
     saveButton: {
-        marginTop: hp('2%'),
-        backgroundColor: '#4caf50',
-        padding: wp('2%'),
-        borderRadius: 5,
+        backgroundColor: '#567BC2',
+        padding: 15,
+        borderRadius: 10,
         alignItems: 'center',
+        marginVertical: 20,
     },
     saveButtonText: {
-        color: '#fff',
+        color: 'white',
+        fontSize: 16,
         fontWeight: 'bold',
     },
-    error: {
-        color: 'red',
+    noDataText: {
         textAlign: 'center',
-        marginTop: hp('2%'),
+        fontSize: 18,
+        color: 'gray',
+        marginTop: 20,
     },
 });
 

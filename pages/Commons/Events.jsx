@@ -62,10 +62,13 @@ const Events = () => {
 
   const renderEventItem = ({ item, index }) => (
     <View style={styles.eventItem}>
-      <Text style={styles.eventText}>{`${item.date}-${item.month}-${item.year}`}: </Text>
       <Text style={styles.eventText}>
         {item.eventname}
       </Text>
+      <View style={styles.Eventcol}>
+        <Text style={styles.eventText}>{item.date}</Text>
+        <Text style={styles.eventText}>{item.dayOfWeek}</Text>
+      </View>
     </View>
   );
 
@@ -112,10 +115,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
   eventText: {
     fontSize: 25,
   },
+  Eventcol: {
+    flexDirection: 'column'
+  }
 });
 
 export default Events;

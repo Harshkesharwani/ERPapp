@@ -182,6 +182,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+        marginBottom: hp('7%'),
     },
     listContainer: {
         padding: wp('4%'),
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
         margin: 16,
         right: 0,
         bottom: 0,
-        backgroundColor: '#585E97',
+        backgroundColor: '#567BC2',
         width: wp('15%'),
         height: wp('15%'),
         borderRadius: wp('7.5%'),
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
         textAlignVertical: 'top',
     },
     button: {
-        backgroundColor: '#585E97',
+        backgroundColor: '#567BC2',
         padding: wp('2%'),
         alignItems: 'center',
         borderRadius: 10,

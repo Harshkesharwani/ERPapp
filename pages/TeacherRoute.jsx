@@ -9,6 +9,7 @@ import Main from '../Component/MainNavbar';
 import Footer from '../Component/Footer';
 
 // commons
+import Teacher_Attendence from '../pages/Students/Attendance';
 import Holiday from '../pages/Commons/Holiday';
 import Leave from './Teachers/Teaacher_leave';
 import BusDetails from '../pages/Commons/BusDetail';
@@ -30,7 +31,7 @@ import Teacher_leave from '../pages/Teachers/Teaacher_leave';
 import ExamPage from '../pages/Teachers/Teacher_Setpaper';
 import AddHomework from '../pages/Teachers/Teacher_homework';
 import Teacher_Examination from '../pages/Teachers/Teacher_Examination';
-import Teacher_Attendence from '../pages/Teachers/Teacher_stuAttendence';
+import TeacherStu_Attendence from '../pages/Teachers/Teacher_stuAttendence';
 import TeacherStudentPage from '../pages/Teachers/TeacherStudent';
 
 const Teacher = createNativeStackNavigator();
@@ -44,6 +45,7 @@ const TeacherRoute = () => {
       <Teacher.Navigator>
         {/* Teacher Section */}
         <Teacher.Screen options={{ headerShown: false }} name="Teacher_dashboard" component={Teacher_Dashboard} />
+        <Teacher.Screen options={{ headerShown: false }} name="Teacher_Attendence" component={Teacher_Attendence} />
         <Teacher.Screen options={{ headerShown: false }} name="Teacher_enquiry" component={Teacher_enquiry} />
         <Teacher.Screen options={{ headerShown: false }} name="Teacher_timetable" component={Teacher_timetable} />
         <Teacher.Screen options={{ headerShown: false }} name="Teacher_leave" component={Teacher_leave} />
@@ -52,7 +54,7 @@ const TeacherRoute = () => {
         <Teacher.Screen options={{ headerShown: false }} name="Teacher_Setpaper" component={ExamPage} />
         <Teacher.Screen options={{ headerShown: false }} name="Teacher_Homework" component={AddHomework} />
         <Teacher.Screen options={{ headerShown: false }} name="Teacher_Examination" component={Teacher_Examination} />
-        <Teacher.Screen options={{ headerShown: false }} name="Teacher_Attendence" component={Teacher_Attendence} />
+        <Teacher.Screen options={{ headerShown: false }} name="TeacherStu_Attendence" component={TeacherStu_Attendence} />
         <Teacher.Screen options={{ headerShown: false }} name="Teacher_Student" component={TeacherStudentPage} />
         <Teacher.Screen options={{ headerShown: false }} name="Holiday" component={Holiday} />
         <Teacher.Screen options={{ headerShown: false }} name="leave" component={Leave} />
