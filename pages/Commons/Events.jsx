@@ -17,6 +17,13 @@ const Events = () => {
   const [events, setEvents] = useState([]);
 
   useEffect(() => {
+    // Call the API to fetch events when the component mounts
+    const date = new Date();
+    const initialMonth = monthNames[date.getMonth()];
+    handleMonthChange(initialMonth);
+  }, []);
+
+  useEffect(() => {
     const newMarkedDates = {};
     events.forEach(event => {
       const { date, month, year } = event;
@@ -26,19 +33,23 @@ const Events = () => {
       newMarkedDates[dateString] = { marked: true, dotColor: 'blue' };
     });
     setMarkedDates(newMarkedDates);
+    handleMonth();
   }, [events]);
 
   const handleDayPress = (day) => {
     setSelectedDate(day.dateString);
   };
 
-  const handleMonthChange = async (months) => {
+  const handleMonth = (months) => {
     const newMonth = months[0].month < 10 ? `0${months[0].month}` : `${months[0].month}`;
     const monthly = convertMonthNumberToName(newMonth);
     const newYear = months[0].year;
     const monthString = `${newMonth}-${newYear}`;
     setCurrentMonth(monthString);
+    handleMonthChange(monthly);
+  }
 
+  const handleMonthChange = async (months) => {
     // Fetch events from API
     try {
       const response = await fetch(`${url}/events`, { // Replace with your API endpoint
@@ -46,10 +57,9 @@ const Events = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ month: monthly }),
+        body: JSON.stringify({ month: months }),
       });
 
-      console.log(response);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -80,7 +90,7 @@ const Events = () => {
         markedDates={markedDates}
         onDayPress={handleDayPress}
         style={styles.calendar_style}
-        onVisibleMonthsChange={handleMonthChange}
+        onVisibleMonthsChange={handleMonth}
       />
       <FlatList
         data={events}

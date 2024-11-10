@@ -8,13 +8,11 @@ const Admin_Student = () => {
     const [filteredStudents, setFilteredStudents] = useState([]);
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
-    const [subjects, setSubjects] = useState([]);
     const [classDropdownVisible, setClassDropdownVisible] = useState(false);
     const [sectionDropdownVisible, setSectionDropdownVisible] = useState(false);
-    const [subjectDropdownVisible, setSubjectDropdownVisible] = useState(false);
     const [selectedClass, setSelectedClass] = useState(null);
     const [selectedSection, setSelectedSection] = useState(null);
-    const [selectedSubject, setSelectedSubject] = useState(null);
+    const [filteredSections, setFilteredSections] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
@@ -33,18 +31,17 @@ const Admin_Student = () => {
 
     useEffect(() => {
         fetchStudentsData();
+        console.log(classes, "claaass")
     }, []);
 
     const fetchStudentsData = async () => {
         try {
-            const response = await fetch(`${url}/admin_student_fetch`); // Replace with your API URL
+            const response = await fetch(`${url}/admin_student_fetch`);
             const data = await response.json();
             console.log(data);
-            setStudents(data.Students);
-            setFilteredStudents(data.Students);
-            setClasses(data.Classes);
-            setSections(data.Sections); // Assuming data.Sections is provided by your API
-            setSubjects(data.Subjects); // Assuming data.Subjects is provided by your API
+            setStudents(data.Students || []);
+            setClasses([...new Set(data.Sections.map(section => section[0]))]);
+            setSections(data.Sections || []);
             setLoading(false);
         } catch (error) {
             setError('Failed to fetch data');
@@ -52,36 +49,25 @@ const Admin_Student = () => {
         }
     };
 
+    // When a class is selected, filter sections based on class
     const handleClassFilter = (className) => {
         setSelectedClass(className);
-        setSelectedSection(null); // Reset section and subject filters
-        setSelectedSubject(null);
-        if (className) {
-            setFilteredStudents(students.filter(student => student.student_class === className));
-        } else {
-            setFilteredStudents(students);
-        }
-        setClassDropdownVisible(false);
+        // Filter sections based on the selected class
+        const filtered = sections.filter(section => section[0] === className);
+        setFilteredSections(filtered);
+        setSelectedSection(null); // Reset section when class changes
+        setFilteredStudents([]);
     };
-
+    // When a section is selected
     const handleSectionFilter = (section) => {
         setSelectedSection(section);
-        if (section) {
-            setFilteredStudents(students.filter(student => student.section === section && student.student_class === selectedClass));
-        } else {
-            setFilteredStudents(students.filter(student => student.student_class === selectedClass));
-        }
-        setSectionDropdownVisible(false);
-    };
-
-    const handleSubjectFilter = (subject) => {
-        setSelectedSubject(subject);
-        if (subject) {
-            setFilteredStudents(students.filter(student => student.subject === subject && student.student_class === selectedClass));
-        } else {
-            setFilteredStudents(students.filter(student => student.student_class === selectedClass));
-        }
-        setSubjectDropdownVisible(false);
+        // Filter students based on selected class and section
+        const filtered = students.filter(
+            student =>
+                student.Class === selectedClass &&
+                student.section_or_department === section
+        );
+        setFilteredStudents(filtered);
     };
 
     const handleCardPress = (student) => {
@@ -90,7 +76,6 @@ const Admin_Student = () => {
     };
 
     const handleSave = async () => {
-        console.log(selectedStudent)
         try {
             const response = await fetch(`${url}/admin_student_update`, {
                 method: 'POST',
@@ -203,63 +188,46 @@ const Admin_Student = () => {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Student</Text>
-            <View style={styles.dropdownContainer}>
-                <TouchableOpacity onPress={() => setClassDropdownVisible(!classDropdownVisible)} style={styles.dropdownButton}>
-                    <Text style={styles.dropdownButtonText}>
-                        Filter by Class: {selectedClass ? selectedClass : 'All'}
-                    </Text>
-                </TouchableOpacity>
-                {classDropdownVisible && (
-                    <View style={styles.dropdown}>
-                        <TouchableOpacity onPress={() => handleClassFilter(null)} style={styles.dropdownItem}>
-                            <Text>All</Text>
+            {/* Class Dropdown */}
+            <TouchableOpacity onPress={() => setClassDropdownVisible(!classDropdownVisible)} style={styles.dropdownButton}>
+                <Text style={styles.dropdownButtonText}>
+                    Filter by Class: {selectedClass ? selectedClass : 'All'}
+                </Text>
+            </TouchableOpacity>
+            {classDropdownVisible && (
+                <View style={styles.dropdown}>
+                    <TouchableOpacity onPress={() => handleClassFilter(null)} style={styles.dropdownItem}>
+                        <Text>All</Text>
+                    </TouchableOpacity>
+                    {classes.map((classValue, index) => (
+                        <TouchableOpacity key={index} onPress={() => handleClassFilter(classValue)} style={styles.dropdownItem}>
+                            <Text>{classValue}</Text>
                         </TouchableOpacity>
-                        {classes.map((classValue, index) => (
-                            <TouchableOpacity key={index} onPress={() => handleClassFilter(classValue)} style={styles.dropdownItem}>
-                                <Text>{classValue}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
+                    ))}
+                </View>
+            )}
 
+            {/* Section Dropdown */}
+            {selectedClass && (
                 <TouchableOpacity onPress={() => setSectionDropdownVisible(!sectionDropdownVisible)} style={styles.dropdownButton}>
                     <Text style={styles.dropdownButtonText}>
                         Filter by Section: {selectedSection ? selectedSection : 'All'}
                     </Text>
                 </TouchableOpacity>
-                {sectionDropdownVisible && (
-                    <View style={styles.dropdown}>
-                        <TouchableOpacity onPress={() => handleSectionFilter(null)} style={styles.dropdownItem}>
-                            <Text>All</Text>
-                        </TouchableOpacity>
-                        {sections.map((section, index) => (
-                            <TouchableOpacity key={index} onPress={() => handleSectionFilter(section)} style={styles.dropdownItem}>
-                                <Text>{section}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-
-                {(selectedClass === '11' || selectedClass === '12') && (
-                    <TouchableOpacity onPress={() => setSubjectDropdownVisible(!subjectDropdownVisible)} style={styles.dropdownButton}>
-                        <Text style={styles.dropdownButtonText}>
-                            Filter by Subject: {selectedSubject ? selectedSubject : 'All'}
-                        </Text>
+            )}
+            {sectionDropdownVisible && (
+                <View style={styles.dropdown}>
+                    <TouchableOpacity onPress={() => handleSectionFilter(null)} style={styles.dropdownItem}>
+                        <Text>All</Text>
                     </TouchableOpacity>
-                )}
-                {subjectDropdownVisible && (
-                    <View style={styles.dropdown}>
-                        <TouchableOpacity onPress={() => handleSubjectFilter(null)} style={styles.dropdownItem}>
-                            <Text>All</Text>
+                    {Array.isArray(filteredSections) && filteredSections.map((section, index) => (
+                        <TouchableOpacity key={index} onPress={() => handleSectionFilter(section[1])} style={styles.dropdownItem}>
+                            <Text>{section[1]}</Text>
                         </TouchableOpacity>
-                        {subjects.map((subject, index) => (
-                            <TouchableOpacity key={index} onPress={() => handleSubjectFilter(subject)} style={styles.dropdownItem}>
-                                <Text>{subject}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-            </View>
+                    ))}
+                </View>
+            )}
+
             <FlatList
                 data={filteredStudents}
                 renderItem={renderItem}
