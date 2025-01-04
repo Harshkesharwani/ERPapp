@@ -169,18 +169,20 @@ const Admin_Holidays = () => {
               style={styles.input}
               editable={false}
             />
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: editHoliday ? '#567BC2' : '#567BC2' }]}
-              onPress={editHoliday ? handleSaveEdit : handleAddHoliday}
-            >
-              <Text style={styles.buttonText}>{editHoliday ? 'Save' : 'Add'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#565f96' }]}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: editHoliday ? '#567BC2' : '#567BC2' }]}
+                onPress={editHoliday ? handleSaveEdit : handleAddHoliday}
+              >
+                <Text style={styles.buttonText}>{editHoliday ? 'Save' : 'Add'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: 'red' }]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -193,6 +195,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: wp('5%'),
+    marginBottom: wp('10%')
   },
   header: {
     fontSize: hp('3%'),
@@ -271,6 +274,7 @@ const styles = StyleSheet.create({
     paddingVertical: hp('2%'),
     borderRadius: 5,
     marginTop: hp('1%'),
+    width: '48%',
   },
   buttonText: {
     fontSize: hp('2%'),

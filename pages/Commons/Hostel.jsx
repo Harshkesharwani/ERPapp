@@ -118,6 +118,7 @@ const HostelApplication = () => {
                 },
                 body: JSON.stringify(applicationData),
             });
+
             const data = await response.json();
             if (response.ok) {
                 Alert.alert('Success', `Your application for ${hostel.building_name} has been sent.`);
@@ -178,13 +179,12 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 20,
-        // justifyContent: 'center',
+        marginBottom: 25,
     },
     header: {
         fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 20,
-        textAlign: 'center',
     },
     hostelList: {
         marginTop: 20,

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Button } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Button, Alert } from 'react-native';
 import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
 import { url } from '../../Component/Config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Teacher_enquiry = () => {
     const [enquiries, setEnquiries] = useState([]);
@@ -10,26 +11,105 @@ const Teacher_enquiry = () => {
     const [dropdownVisible, setDropdownVisible] = useState(false);
     const [replyingIndex, setReplyingIndex] = useState(null);
     const [replyMessage, setReplyMessage] = useState('');
+    const [selectedClass, setSelectedClass] = useState(null);
+    const [selectedSection, setSelectedSection] = useState(null);
+    const [isClassDropdownVisible, setClassDropdownVisible] = useState(false);
+    const [isSectionDropdownVisible, setSectionDropdownVisible] = useState(false);
+    const [id, setid] = useState('');
+    const [classes, setClasses] = useState([]); // Initialize classes state
+    const [sections, setSections] = useState([]); // Initialize sections state
+    const [loading, setLoading] = useState(false); // Optional: to handle loading states
+
+    const fetchUserProfile = async () => {
+        try {
+            const userProfile = await AsyncStorage.getItem('userProfile');
+            if (userProfile) {
+                const parsedProfile = JSON.parse(userProfile);
+                fetchClassSectionDetails(parsedProfile["enrollment_or_employee_id"]);
+                setid(parsedProfile["enrollment_or_employee_id"]);
+            }
+        } catch (error) {
+            console.error('Failed to fetch user profile:', error);
+        }
+    };
 
     useEffect(() => {
-        fetchEnquiries();
+        if (selectedClass) {
+            filterSections(selectedClass);
+        }
+    }, [selectedClass]);
+
+    useEffect(() => {
+        fetchUserProfile();
     }, []);
+
+    useEffect(() => {
+        if (selectedClass && selectedSection) {
+            fetchEnquiries();
+        }
+    }, [selectedClass, selectedSection]);
+
+    const fetchClassSectionDetails = async (id) => {
+        setLoading(true);
+        try {
+            const response = await fetch(`${url}/teacher_class_section_details`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ enrollment_or_employee_id: id }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.Sections) {
+                const mappedClasses = data.Sections.reduce((acc, [classNumber, section]) => {
+                    let existingClass = acc.find(cls => cls.classNumber === classNumber);
+                    if (!existingClass) {
+                        existingClass = { classNumber, sections: [] };
+                        acc.push(existingClass);
+                    }
+                    existingClass.sections.push({ section_id: section, section_name: section });
+                    return acc;
+                }, []);
+                setClasses(mappedClasses);
+            } else {
+                console.log('No Classes returned from API');
+                Alert.alert('No classes found.');
+            }
+
+            setLoading(false);
+        } catch (error) {
+            console.error('Fetch error:', error);
+            Alert.alert('Failed to fetch class and section details');
+            setLoading(false);
+        }
+    };
+
+    const filterSections = (classId) => {
+        const filteredSections = classes.find(cls => cls.classNumber === classId)?.sections || [];
+        setSections(filteredSections);
+    };
 
     const fetchEnquiries = async () => {
         try {
-            const response = await fetch(`${url}/admin_enquiry_fetch`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        enrollment_or_employee_id: "th002"
-                    })
-                }); // Replace with your API URL
+            const response = await fetch(`${url}/teacher_enquiry_fetch`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    enrollment_or_employee_id: id,
+                    class: selectedClass,
+                    section: selectedSection,
+                }),
+            });
             const data = await response.json();
             console.log(data);
-            const formattedEnquiries = data.data.map((enquiry, index) => ({
+            const formattedEnquiries = data.map((enquiry, index) => ({
                 title: `Enquiry ${index + 1}`,
                 submitDate: enquiry.date,
                 studentName: enquiry.Name,
@@ -99,7 +179,6 @@ const Teacher_enquiry = () => {
         }
     };
 
-
     const renderEnquiryItem = ({ item, index }) => {
         const isExpanded = expandedIndex === index;
         const isReplying = replyingIndex === index;
@@ -107,7 +186,6 @@ const Teacher_enquiry = () => {
         return (
             <View style={styles.itemContainer}>
                 <TouchableOpacity onPress={() => setExpandedIndex(isExpanded ? null : index)}>
-                    {/* <Text style={styles.enquiryTitle}>{item.title}</Text> */}
                     <Text style={styles.detailText}>Student Name: {item.studentName}</Text>
                     <Text style={styles.messageText}>Message: {item.message}</Text>
                 </TouchableOpacity>
@@ -157,10 +235,69 @@ const Teacher_enquiry = () => {
                     </View>
                 )}
             </View>
+
+            <TouchableOpacity
+                onPress={() => setClassDropdownVisible(!isClassDropdownVisible)}
+                style={styles.dropdownButton}
+            >
+                <Text style={styles.dropdownButtonText}>
+                    {selectedClass ? `Selected Class: ${selectedClass}` : 'Select Class'}
+                </Text>
+            </TouchableOpacity>
+            {isClassDropdownVisible && (
+                <View style={styles.dropdown}>
+                    <FlatList
+                        data={classes}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setSelectedClass(item.classNumber);
+                                    setClassDropdownVisible(false);
+                                    setSections(item.sections); // Set sections directly based on class
+                                }}
+                                style={styles.dropdownItem}
+                            >
+                                <Text>{item.classNumber}</Text>
+                            </TouchableOpacity>
+                        )}
+                        keyExtractor={(item) => item.classNumber.toString()}
+                    />
+                </View>
+            )}
+
+            <TouchableOpacity
+                onPress={() => setSectionDropdownVisible(!isSectionDropdownVisible)}
+                style={styles.dropdownButton}
+                disabled={!selectedClass} // Disable until class is selected
+            >
+                <Text style={styles.dropdownButtonText}>
+                    {selectedSection ? `Selected Section: ${selectedSection}` : 'Select Section'}
+                </Text>
+            </TouchableOpacity>
+            {isSectionDropdownVisible && (
+                <View style={styles.dropdown}>
+                    <FlatList
+                        data={sections}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setSelectedSection(item.section_name);
+                                    setSectionDropdownVisible(false);
+                                }}
+                                style={styles.dropdownItem}
+                            >
+                                <Text>{item.section_name}</Text>
+                            </TouchableOpacity>
+                        )}
+                        keyExtractor={(item) => item.section_name}
+                    />
+                </View>
+            )}
+
             <FlatList
                 data={enquiries}
-                keyExtractor={(item, index) => index.toString()}
                 renderItem={renderEnquiryItem}
+                keyExtractor={(item, index) => index.toString()}
             />
         </View>
     );
@@ -169,78 +306,73 @@ const Teacher_enquiry = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: wp('5%'),
-        backgroundColor: '#fff',
+        backgroundColor: '#f9f9f9',
+        paddingHorizontal: wp('5%'),
     },
     title: {
-        fontSize: 30,
-        marginBottom: wp('2%'),
+        fontSize: 26,
+        fontWeight: 'bold',
+        marginBottom: 10,
     },
     sortContainer: {
-        marginBottom: wp('2%'),
-        alignItems: 'flex-start',
+        marginBottom: 10,
     },
     dropdownButton: {
-        borderWidth: 1,
-        borderColor: '#ccc',
+        padding: 10,
+        backgroundColor: '#ddd',
         borderRadius: 5,
-        padding: wp('2%'),
-        backgroundColor: '#f9f9f9',
+        marginBottom: 5,
     },
     dropdownButtonText: {
         fontSize: 16,
     },
     dropdown: {
+        backgroundColor: '#fff',
         borderWidth: 1,
         borderColor: '#ccc',
         borderRadius: 5,
-        marginTop: wp('2%'),
-        width: wp('30%'),
-        backgroundColor: '#f9f9f9',
+        marginBottom: 10,
     },
     dropdownItem: {
-        padding: wp('2%'),
+        padding: 10,
     },
     itemContainer: {
-        marginVertical: wp('2%'),
-        borderWidth: 0.5,
-        padding: wp('2%'),
-        borderRadius: 10,
-        backgroundColor: '#f9f9f9',
-    },
-    enquiryTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        backgroundColor: '#fff',
+        padding: 10,
+        marginBottom: 10,
+        borderRadius: 5,
+        borderWidth: 1,
+        borderColor: '#ccc',
     },
     detailsContainer: {
-        marginTop: wp('2%'),
+        marginTop: 10,
     },
     dateText: {
-        fontSize: 16,
-        fontWeight: 'bold',
+        fontSize: 14,
+        color: '#555',
     },
     detailText: {
         fontSize: 16,
-        marginVertical: wp('0.5%'),
+        marginBottom: 5,
     },
     messageText: {
         fontSize: 16,
-        marginTop: wp('1%'),
+        marginBottom: 5,
     },
     replyButton: {
-        marginTop: wp('2%'),
+        fontSize: 16,
         color: '#007BFF',
-        textDecorationLine: 'underline',
+        marginTop: 10,
     },
     replyContainer: {
-        marginTop: wp('2%'),
+        marginTop: 10,
     },
     replyInput: {
+        height: 40,
+        borderColor: 'gray',
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: wp('2%'),
-        marginBottom: wp('2%'),
+        paddingHorizontal: 10,
+        marginBottom: 10,
     },
 });
 

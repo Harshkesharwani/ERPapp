@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Pressable } from 'react-native';
 import {
     widthPercentageToDP as wp,
     heightPercentageToDP as hp,
 } from 'react-native-responsive-screen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import profile from '../../assets/profile.png';
 import arjunProfile from '../../assets/profile.png'; // Replace with the actual path to Arjun's image
 import priyaProfile from '../../assets/profile.png';
@@ -14,6 +15,25 @@ import Logout from '../../assets/icons/logout.png';
 
 const Menu = ({ navigation }) => {
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+    const [Name, setName] = useState('');
+    const [Profile, setProfile] = useState('');
+
+    const getUserProfile = async () => {
+        try {
+            const userProfile = await AsyncStorage.getItem('userProfile');
+            if (userProfile !== null) {
+                const parsedProfile = JSON.parse(userProfile);
+                // console.log('User Profile:', JSON.parse(userProfile));
+                setName(parsedProfile["Name"]);
+                setProfile(parsedProfile["profile_type"]);
+            }
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+        }
+    };
+    useEffect(() => {
+        getUserProfile();
+    }, []);
 
     const toggleDropdown = () => {
         setIsDropdownVisible(!isDropdownVisible);
@@ -27,14 +47,19 @@ const Menu = ({ navigation }) => {
         navigation.navigate('HelpandSupport');
     }
 
+    const Handlelogout = () => {
+        AsyncStorage.removeItem('userProfile');
+        navigation.replace('login');
+    }
+
     return (
         <View style={styles.container}>
             <View style={styles.box1}>
                 <TouchableOpacity style={styles.img}>
                     <Image source={profile} style={styles.profileImage}></Image>
                     <View style={styles.profile}>
-                        <Text style={styles.text}>Khushi</Text>
-                        <Text style={styles.text1}>Student</Text>
+                        <Text style={styles.text}>{Name}</Text>
+                        <Text style={styles.text1}>{Profile}</Text>
                     </View>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.button}>
@@ -42,9 +67,11 @@ const Menu = ({ navigation }) => {
                 </TouchableOpacity>
             </View>
             <View style={styles.container1}>
-                <Pressable style={styles.dropdownToggle} onPress={toggleDropdown}>
-                    <Text style={styles.dropdownToggleText}>Siblings Info</Text>
-                </Pressable>
+                {Profile == 'student' && (
+                    <Pressable style={styles.dropdownToggle} onPress={toggleDropdown}>
+                        <Text style={styles.dropdownToggleText}>Siblings Info</Text>
+                    </Pressable>
+                )}
                 {isDropdownVisible && (
                     <View style={styles.dropdown}>
                         <View style={styles.dropdownItem}>
@@ -75,7 +102,7 @@ const Menu = ({ navigation }) => {
                     <Image source={Help} />
                     <Text style={styles.text3}>Help</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.container3}>
+                <TouchableOpacity style={styles.container3} onPress={Handlelogout}>
                     <Image source={Logout} />
                     <Text style={styles.text3}>Logout</Text>
                 </TouchableOpacity>

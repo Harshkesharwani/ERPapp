@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, ScrollView } from 'react-native';
 import { url } from '../../Component/Config';
+import { widthPercentageToDP } from 'react-native-responsive-screen';
 
 const Admin_Teacher = () => {
     const [teachers, setTeachers] = useState([]);
@@ -89,6 +90,7 @@ const Admin_Teacher = () => {
     };
 
     const handleSave = async () => {
+        console.log('Update teacher', selectedTeacher)
         try {
             const response = await fetch(`${url}/admin_teacher_update`, {
                 method: 'POST',
@@ -128,6 +130,7 @@ const Admin_Teacher = () => {
                                 },
                                 body: JSON.stringify({ teacher_id: id }),
                             });
+                            const data = await response.json();
                             if (response.ok) {
                                 fetchTeachersData();
                             } else {
@@ -190,7 +193,7 @@ const Admin_Teacher = () => {
     return (
         <>
             <ScrollView style={styles.container}>
-                <Text style={styles.title}>Admin Teacher</Text>
+                <Text style={styles.title}>Teacher</Text>
                 <TouchableOpacity onPress={() => setDropdownVisible(!dropdownVisible)} style={styles.dropdownButton}>
                     <Text style={styles.dropdownButtonText}>
                         Filter by Department: {selectedDepartment ? selectedDepartment : 'All'}
@@ -254,6 +257,13 @@ const Admin_Teacher = () => {
                                     placeholder="Country"
                                     value={selectedTeacher.country}
                                     onChangeText={(text) => setSelectedTeacher({ ...selectedTeacher, country: text })}
+                                />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Age"
+                                    value={selectedTeacher.Age}
+                                    onChangeText={(text) => setSelectedTeacher({ ...selectedTeacher, Age: text })}
+                                    required
                                 />
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                                     <TouchableOpacity
@@ -329,7 +339,7 @@ const Admin_Teacher = () => {
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                                 <TouchableOpacity
                                     onPress={handleAddTeacher}
-                                    style={[styles.button, { backgroundColor: 'green' }]}
+                                    style={[styles.button, { backgroundColor: '#567BC2' }]}
                                 >
                                     <Text style={styles.buttonText}>Save</Text>
                                 </TouchableOpacity>
@@ -356,6 +366,7 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 16,
         backgroundColor: '#f5f5f5',
+        marginBottom: widthPercentageToDP('15%'),
     },
     title: {
         fontSize: 24,
@@ -364,7 +375,7 @@ const styles = StyleSheet.create({
     },
     dropdownButton: {
         padding: 10,
-        backgroundColor: '#007bff',
+        backgroundColor: '#567BC2',
         borderRadius: 5,
         marginBottom: 8,
     },
@@ -451,12 +462,12 @@ const styles = StyleSheet.create({
     },
     fab: {
         position: 'absolute',
-        bottom: 16,
-        right: 16,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#007bff',
+        bottom: widthPercentageToDP('15%'),
+        right: 20,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#567BC2',
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 5,

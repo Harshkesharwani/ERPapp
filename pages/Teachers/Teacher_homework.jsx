@@ -10,17 +10,17 @@ import {
     TextInput,
     ActivityIndicator,
     Alert,
-    Button,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { url } from '../../Component/Config';
+import { heightPercentageToDP, widthPercentageToDP } from 'react-native-responsive-screen';
 
 const AddHomework = () => {
     const [homeworkList, setHomeworkList] = useState([]);
-    const [classes, setClasses] = useState([]);
-    const [sections, setSections] = useState([]);
+    const [classes, setClasses] = useState([]); // Array of classes with sections
+    const [sections, setSections] = useState([]); // Sections for selected class
     const [modalVisible, setModalVisible] = useState(false);
     const [newHomework, setNewHomework] = useState({
         id: '',
@@ -42,6 +42,16 @@ const AddHomework = () => {
     }, []);
 
     useEffect(() => {
+        if (selectedClass) {
+            // When a class is selected, update sections accordingly
+            const classObject = classes.find(cls => cls.classNumber === selectedClass);
+            if (classObject) {
+                setSections(classObject.sections);
+            }
+        }
+    }, [selectedClass]);
+
+    useEffect(() => {
         if (selectedClass && selectedSection) {
             fetchHomeworkList();
         }
@@ -52,7 +62,7 @@ const AddHomework = () => {
             const userProfile = await AsyncStorage.getItem('userProfile');
             if (userProfile) {
                 const parsedProfile = JSON.parse(userProfile);
-                fetchClassAndSection(parsedProfile["Employee ID"]);
+                fetchClassAndSection(parsedProfile["enrollment_or_employee_id"]);
             }
         } catch (error) {
             setError('Failed to fetch user profile');
@@ -71,8 +81,16 @@ const AddHomework = () => {
                 body: JSON.stringify({ enrollment_or_employee_id: id }),
             });
             const data = await response.json();
-            setClasses(data.class);
-            setSections(data.section);
+            const mappedClasses = data.Sections.reduce((acc, [classNumber, section]) => {
+                let existingClass = acc.find(cls => cls.classNumber === classNumber);
+                if (!existingClass) {
+                    existingClass = { classNumber, sections: [] };
+                    acc.push(existingClass);
+                }
+                existingClass.sections.push({ section_id: section, section_name: section });
+                return acc;
+            }, []);
+            setClasses(mappedClasses);
         } catch (error) {
             setError('Failed to fetch class and section data');
         } finally {
@@ -185,10 +203,12 @@ const AddHomework = () => {
 
     const selectItem = (item, type) => {
         if (type === 'class') {
-            setSelectedClass(item);
+            setSelectedClass(item.classNumber); // Update selected class
+            setSelectedSection(''); // Reset section when class changes
+            setSections(item.sections); // Update sections based on selected class
             setDropdownOpen('');
-        } else {
-            setSelectedSection(item);
+        } else if (type === 'section') {
+            setSelectedSection(item.section_name); // Update selected section
             setDropdownOpen('');
         }
     };
@@ -203,25 +223,25 @@ const AddHomework = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Homework List</Text>
+            <Text style={styles.title}>Homework</Text>
             <View style={styles.dropdownContainer}>
                 <TouchableOpacity
                     style={styles.dropdownButton}
                     onPress={() => toggleDropdown('class')}
                 >
                     <Text style={styles.dropdownButtonText}>
-                        Class: {selectedClass || 'Select Class'}
+                        {selectedClass || 'Select Class'}
                     </Text>
                 </TouchableOpacity>
                 {dropdownOpen === 'class' && (
                     <View style={styles.dropdownMenu}>
                         {classes.map((classItem) => (
                             <TouchableOpacity
-                                key={classItem}
+                                key={classItem.classNumber}
                                 style={styles.dropdownMenuItem}
                                 onPress={() => selectItem(classItem, 'class')}
                             >
-                                <Text style={styles.dropdownMenuText}>{classItem}</Text>
+                                <Text style={styles.dropdownMenuText}>{classItem.classNumber}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -229,20 +249,21 @@ const AddHomework = () => {
                 <TouchableOpacity
                     style={styles.dropdownButton}
                     onPress={() => toggleDropdown('section')}
+                    disabled={!selectedClass} // Disable until class is selected
                 >
                     <Text style={styles.dropdownButtonText}>
-                        Section: {selectedSection || 'Select Section'}
+                        {selectedSection || 'Select Section'}
                     </Text>
                 </TouchableOpacity>
                 {dropdownOpen === 'section' && (
                     <View style={styles.dropdownMenu}>
                         {sections.map((sectionItem) => (
                             <TouchableOpacity
-                                key={sectionItem}
+                                key={sectionItem.section_id}
                                 style={styles.dropdownMenuItem}
                                 onPress={() => selectItem(sectionItem, 'section')}
                             >
-                                <Text style={styles.dropdownMenuText}>{sectionItem}</Text>
+                                <Text style={styles.dropdownMenuText}>{sectionItem.section_name}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -261,16 +282,11 @@ const AddHomework = () => {
                     setModalVisible(true);
                 }}
             >
-                <MaterialIcons name="add" size={24} color="white" />
+                <Text style={styles.fabText}>+</Text>
             </TouchableOpacity>
 
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalView}>
+            <Modal visible={modalVisible} animationType="slide">
+                <View style={styles.modalContainer}>
                     <Text style={styles.modalTitle}>{newHomework.id ? 'Edit Homework' : 'Add Homework'}</Text>
                     <TextInput
                         style={styles.input}
@@ -297,39 +313,35 @@ const AddHomework = () => {
                         onChangeText={(text) => setNewHomework({ ...newHomework, homework: text })}
                     />
                     <TouchableOpacity
-                        style={styles.input}
+                        style={styles.dateButton}
                         onPress={() => setShowDatePicker(true)}
                     >
-                        <Text>{`Date: ${newHomework.date.toLocaleDateString()}`}</Text>
+                        <Text style={styles.dateButtonText}>
+                            {newHomework.date.toLocaleDateString()}
+                        </Text>
                     </TouchableOpacity>
                     {showDatePicker && (
                         <DateTimePicker
                             value={newHomework.date}
-                            mode='date'
-                            display='default'
+                            mode="date"
+                            display="default"
                             onChange={onDateChange}
                         />
                     )}
-                    <TouchableHighlight
-                        style={styles.addButton}
-                        onPress={() => {
-                            if (newHomework.id) {
-                                handleEditHomework();
-                            } else {
-                                handleAddHomework();
-                            }
-                        }}
-                    >
-                        <Text style={styles.addButtonText}>
-                            {newHomework.id ? 'Update Homework' : 'Add Homework'}
-                        </Text>
-                    </TouchableHighlight>
-                    <TouchableHighlight
-                        style={styles.cancelButton}
-                        onPress={() => setModalVisible(false)}
-                    >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                    </TouchableHighlight>
+                    <View style={styles.modalButtons}>
+                        <TouchableOpacity
+                            style={styles.saveButton}
+                            onPress={newHomework.id ? handleEditHomework : handleAddHomework}
+                        >
+                            <Text style={styles.saveButtonText}>Save</Text>
+                        </TouchableOpacity>
+                        <TouchableHighlight
+                            style={styles.cancelButton}
+                            onPress={() => setModalVisible(false)}
+                        >
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableHighlight>
+                    </View>
                 </View>
             </Modal>
         </View>
@@ -340,9 +352,14 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 20,
+        marginBottom: '10%'
+    },
+    fabText: {
+        fontSize: 24,
+        color: 'white'
     },
     title: {
-        fontSize: 20,
+        fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 20,
     },
@@ -385,7 +402,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 20,
         right: 20,
-        backgroundColor: '#2196F3',
+        backgroundColor: '#567BC2',
         width: 60,
         height: 60,
         borderRadius: 30,
@@ -393,19 +410,27 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     modalView: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        top: '24%',
+        width: '80%', // Adjust the width to your preference
+        padding: 20,  // Add some padding for the modal content
+        backgroundColor: 'white',
+        borderRadius: 10, // Rounded corners
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5, // For Android shadow
+        alignSelf: 'center', // Center the modal horizontally
+        justifyContent: 'center', // Center the content vertically
     },
     modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
         marginBottom: 20,
-        color: '#fff',
+        color: 'black',
     },
     input: {
-        width: '80%',
+        width: '100%',
         padding: 10,
         marginVertical: 5,
         backgroundColor: '#fff',
@@ -414,10 +439,11 @@ const styles = StyleSheet.create({
         borderColor: '#ccc',
     },
     addButton: {
-        backgroundColor: '#2196F3',
+        backgroundColor: '#567BC2',
         padding: 10,
         borderRadius: 5,
         marginVertical: 5,
+        width: '48%',
     },
     addButtonText: {
         color: '#fff',
@@ -428,6 +454,7 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 5,
         marginVertical: 5,
+        width: '48%',
     },
     cancelButtonText: {
         color: '#fff',

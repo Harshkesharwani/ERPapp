@@ -44,12 +44,14 @@ const AvailableBooks = () => {
   );
 
   return (
-    <FlatList
-      data={books}
-      renderItem={renderBookItem}
-      keyExtractor={(item) => item.book_name} // assuming book_name is unique
-      contentContainerStyle={styles.listContainer}
-    />
+    <View style={{}}>
+      <FlatList
+        data={books}
+        renderItem={renderBookItem}
+        keyExtractor={(item) => item.book_name} // assuming book_name is unique
+        contentContainerStyle={styles.listContainer}
+      />
+    </View>
   );
 };
 

@@ -16,9 +16,12 @@ const Homework = () => {
             if (userProfile !== null) {
                 const parsedProfile = JSON.parse(userProfile);
                 setClass(parsedProfile['Class']);
-                // console.log(parsedProfile['Class']);
                 setSection(parsedProfile['section_or_department']);
-                // console.log(parsedProfile['section_or_department']);
+
+                // Set the current date
+                const date = new Date();
+                const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                setCurrentDate(formattedDate);
             }
         } catch (error) {
             console.error('Error fetching user profile:', error);
@@ -26,15 +29,16 @@ const Homework = () => {
     };
 
     useEffect(() => {
-        const date = new Date();
-        const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        setCurrentDate(formattedDate);
-        fetchHomework(formattedDate);
         getUserProfile();
     }, []);
 
+    useEffect(() => {
+        if (clasess && section && currentDate) {
+            fetchHomework(currentDate);
+        }
+    }, [clasess, section, currentDate]);
+
     const fetchHomework = async (date) => {
-        console.log(clasess)
         try {
             const response = await fetch(`${url}/homework`, {
                 method: 'POST',
@@ -50,7 +54,6 @@ const Homework = () => {
 
             if (response.ok) {
                 const data = await response.json();
-                // console.log(data)
                 setHomework(data["Home Work"]);
             } else {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -90,9 +93,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 30,
-        marginVertical: wp('2%'),
         fontWeight: 'bold',
-        textAlign: 'center',
     },
     homeworkList: {
         marginTop: hp('2%'),

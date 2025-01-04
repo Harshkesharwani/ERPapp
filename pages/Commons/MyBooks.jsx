@@ -62,7 +62,7 @@ const MyBooks = () => {
         style={styles.bookImage}
       />
       <View style={styles.bookInfo}>
-        <Text style={styles.bookTitle}>{item.books_name}</Text>
+        <Text style={styles.bookTitle}>{item.book_name}</Text>
         <Text style={styles.bookDetail}>Class: {item.class}</Text>
         <Text style={styles.bookIssuedDate}>Issued on: {item.issued_on}</Text>
         <Text style={styles.bookReturnDate}>Return date: {item.return_date}</Text>

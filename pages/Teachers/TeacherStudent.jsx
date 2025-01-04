@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { url } from '../../Component/Config';
@@ -20,7 +20,13 @@ const TeacherStudentPage = () => {
     }, []);
 
     useEffect(() => {
-        if (selectedClass || selectedSection) {
+        if (selectedClass) {
+            filterSections(selectedClass);
+        }
+    }, [selectedClass]);
+
+    useEffect(() => {
+        if (selectedClass && selectedSection) {
             fetchStudentsData();
         }
     }, [selectedClass, selectedSection]);
@@ -29,13 +35,11 @@ const TeacherStudentPage = () => {
         const userProfile = await AsyncStorage.getItem('userProfile');
         if (userProfile) {
             const parsedProfile = JSON.parse(userProfile);
-            console.log(parsedProfile)
-            fetchClassAndSection(parsedProfile["Employee ID"]);
+            fetchClassAndSection(parsedProfile["enrollment_or_employee_id"]);
         }
     };
 
     const fetchClassAndSection = async (id) => {
-        // console.log(id)
         try {
             const response = await fetch(`${url}/teacher_class_section_details`, {
                 method: 'POST',
@@ -45,9 +49,19 @@ const TeacherStudentPage = () => {
                 body: JSON.stringify({ enrollment_or_employee_id: id }),
             });
             const data = await response.json();
-            // console.log(data)
-            setClasses(data.class);
-            setSections(data.section);
+
+            if (data.Sections) {
+                const mappedClasses = data.Sections.reduce((acc, [classNumber, section]) => {
+                    let existingClass = acc.find(cls => cls.classNumber === classNumber);
+                    if (!existingClass) {
+                        existingClass = { classNumber, sections: [] };
+                        acc.push(existingClass);
+                    }
+                    existingClass.sections.push({ section_id: section, section_name: section });
+                    return acc;
+                }, []);
+                setClasses(mappedClasses);
+            }
             setLoading(false);
         } catch (error) {
             setError('Failed to fetch class and section data');
@@ -55,9 +69,12 @@ const TeacherStudentPage = () => {
         }
     };
 
+    const filterSections = (classId) => {
+        const filteredSections = classes.find(cls => cls.classNumber === classId)?.sections || [];
+        setSections(filteredSections);
+    };
+
     const fetchStudentsData = async () => {
-        console.log(selectedClass);
-        console.log(selectedSection);
         setLoading(true);
         try {
             const response = await fetch(`${url}/student_fetch_classwise`, {
@@ -68,7 +85,6 @@ const TeacherStudentPage = () => {
                 body: JSON.stringify({ class: selectedClass, section: selectedSection }),
             });
             const data = await response.json();
-            console.log(data)
             setStudents(data);
             setLoading(false);
         } catch (error) {
@@ -78,12 +94,13 @@ const TeacherStudentPage = () => {
     };
 
     const handleClassFilter = (classValue) => {
-        setSelectedClass(classValue);
+        setSelectedClass(classValue.classNumber);
+        setSelectedSection(null); // Reset section when class changes
         setClassDropdownVisible(false);
     };
 
     const handleSectionFilter = (sectionValue) => {
-        setSelectedSection(sectionValue);
+        setSelectedSection(sectionValue.section_id);
         setSectionDropdownVisible(false);
     };
 
@@ -91,7 +108,6 @@ const TeacherStudentPage = () => {
         <TouchableOpacity onPress={() => handleCardPress(item)} style={styles.card}>
             <Text style={styles.cardTitle}>Student ID: {item.student_id}</Text>
             <Text style={styles.cardText}>Name: {item.student_name}</Text>
-
         </TouchableOpacity>
     );
 
@@ -105,39 +121,45 @@ const TeacherStudentPage = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Teacher Student</Text>
+            <Text style={styles.title}>Student</Text>
             <View style={styles.dropdownContainer}>
+                {/* Class Dropdown */}
                 <TouchableOpacity onPress={() => setClassDropdownVisible(!classDropdownVisible)} style={styles.dropdownButton}>
                     <Text style={styles.dropdownButtonText}>
-                        Filter by Class: {selectedClass ? selectedClass : 'All'}
+                        {selectedClass ? `Class: ${selectedClass}` : 'Select Class'}
                     </Text>
                 </TouchableOpacity>
                 {classDropdownVisible && (
                     <View style={styles.dropdown}>
-                        <TouchableOpacity onPress={() => handleClassFilter(null)} style={styles.dropdownItem}>
-                            <Text>All</Text>
-                        </TouchableOpacity>
                         {classes.map((classValue, index) => (
-                            <TouchableOpacity key={index} onPress={() => handleClassFilter(classValue)} style={styles.dropdownItem}>
-                                <Text>{classValue}</Text>
+                            <TouchableOpacity
+                                key={index}
+                                onPress={() => handleClassFilter(classValue)}
+                                style={styles.dropdownItem}
+                            >
+                                <Text>{classValue.classNumber}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
                 )}
 
-                <TouchableOpacity onPress={() => setSectionDropdownVisible(!sectionDropdownVisible)} style={styles.dropdownButton}>
-                    <Text style={styles.dropdownButtonText}>
-                        Filter by Section: {selectedSection ? selectedSection : 'All'}
-                    </Text>
-                </TouchableOpacity>
+                {/* Section Dropdown */}
+                {selectedClass && (
+                    <TouchableOpacity onPress={() => setSectionDropdownVisible(!sectionDropdownVisible)} style={styles.dropdownButton}>
+                        <Text style={styles.dropdownButtonText}>
+                            {selectedSection ? `Section: ${selectedSection}` : 'Select Section'}
+                        </Text>
+                    </TouchableOpacity>
+                )}
                 {sectionDropdownVisible && (
                     <View style={styles.dropdown}>
-                        <TouchableOpacity onPress={() => handleSectionFilter(null)} style={styles.dropdownItem}>
-                            <Text>All</Text>
-                        </TouchableOpacity>
                         {sections.map((section, index) => (
-                            <TouchableOpacity key={index} onPress={() => handleSectionFilter(section)} style={styles.dropdownItem}>
-                                <Text>{section}</Text>
+                            <TouchableOpacity
+                                key={index}
+                                onPress={() => handleSectionFilter(section)}
+                                style={styles.dropdownItem}
+                            >
+                                <Text>{section.section_name}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -166,6 +188,7 @@ const styles = StyleSheet.create({
         marginBottom: hp('2%'),
     },
     dropdownButton: {
+        borderWidth: 1,
         padding: wp('3%'),
         backgroundColor: '#f0f0f0',
         borderRadius: 5,
@@ -178,7 +201,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderRadius: 5,
         borderWidth: 1,
-        borderColor: '#ccc',
+        borderColor: 'black',
+        marginBottom: 5,
     },
     dropdownItem: {
         padding: wp('3%'),

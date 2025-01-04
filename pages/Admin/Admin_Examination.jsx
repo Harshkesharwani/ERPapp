@@ -17,8 +17,7 @@ const Dropdown = ({ label, options, onSelect, disabled }) => {
   };
 
   return (
-    <View style={styles.dropdown}>
-      <Text>{label}</Text>
+    <View style={styles.dropdownContainer}>
       <TouchableOpacity style={styles.dropdownButton} onPress={() => !disabled && setVisible(!visible)}>
         <Text style={styles.dropdownButtonText}>{selected ? selected : 'Select'}</Text>
       </TouchableOpacity>
@@ -46,29 +45,28 @@ const ExaminationPage = ({ navigation }) => {
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [examData, setExamData] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
   const [modalVisible1, setModalVisible1] = useState(false);
   const [newExams, setNewExams] = useState([]);
   const [currentExam, setCurrentExam] = useState({
     class: '',
     subject: '',
-    date: new Date(),
+    date: '' || new Date(),
     examType: '',
-    time: new Date(),
-    endTime: new Date(),
+    time: '' || new Date(),
+    endTime: '' || new Date(),
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
-  const examTypes = ['Final', 'Half Yearly', 'Unit Test'];
-
   const handleClassChange = (value) => {
-    const classNumber = parseInt(value.split(' ')[1]);
+    const classNumber = String(value.split(' ')[1]);
     setSelectedClass(classNumber);
     setCurrentExam((prevExam) => ({ ...prevExam, class: value }));
     setSelectedBranch(null);
     setShowExamTypeDropdown(true);
-    setShowBranchDropdown(classNumber === 11 || classNumber === 12);
+    setShowBranchDropdown(classNumber === '11' || classNumber === '12');
   };
 
   const handleExamTypeChange = (value) => {
@@ -76,15 +74,12 @@ const ExaminationPage = ({ navigation }) => {
     setCurrentExam((prevExam) => ({ ...prevExam, examType: value }));
   };
 
-  const handleBranchChange = (branch) => {
-    setSelectedBranch(branch);
-  };
-
   const handleSubmit = async () => {
     const currentDate = new Date();
     const formattedDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+
     try {
-      const response = await fetch(`${url}/exam_time_table`, {
+      const response = await fetch(`${url}/admin_exam_time_table`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,15 +94,20 @@ const ExaminationPage = ({ navigation }) => {
       if (response.ok) {
         setExamData(data['Exam Time Table']); // Store fetched data
       } else {
-        throw new Error('Failed to post data');
+        throw new Error('Failed to fetch data');
       }
     } catch (error) {
       console.error('Error posting data:', error);
-      Alert.alert('Error', 'Failed to post examination data');
+      Alert.alert('Error', 'Failed to fetch examination data');
     }
   };
 
   const handleAddExam = () => {
+
+    if (!currentExam.class || !currentExam.subject || !currentExam.examType || !currentExam.date || !currentExam.time || !currentExam.endTime) {
+      Alert.alert('Error', 'Please fill out all the fields');
+      return;
+    }
     const formattedExam = {
       ...currentExam,
       date: formatDate(currentExam.date),
@@ -124,6 +124,51 @@ const ExaminationPage = ({ navigation }) => {
     });
   };
 
+  const handleRowClick = (exam) => {
+    setCurrentExam({
+      id: exam.id,
+      class: exam.class,
+      subject: exam.subject,
+      date: exam.date || new Date(),
+      examType: exam.examType,
+      time: exam.time || new Date(),
+      endTime: exam.endTime || new Date(),
+    });
+    setModalVisible(true); // Open the modal
+  };
+
+  // Handle save after editing
+  const handleSaveExam = async () => {
+    try {
+      const response = await fetch(`${url}/admin_update_exam_time_table`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: currentExam.id, // Include ID to update the specific exam
+          class: currentExam.class,
+          subject: currentExam.subject,
+          date: currentExam.date,
+          examType: currentExam.examType,
+          time: currentExam.time,
+          endTime: currentExam.endTime,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setModalVisible(false); // Close modal on success
+        Alert.alert('Success', 'Exam updated successfully');
+        handleSubmit(); // Refresh the data
+      } else {
+        throw new Error('Failed to update exam');
+      }
+    } catch (error) {
+      console.error('Error updating exam:', error);
+      Alert.alert('Error', 'Failed to update exam');
+    }
+  };
+
   const handleNewExamSubmit = async () => {
     try {
       const response = await fetch(`${url}/admin_save_exam_time_table`, {
@@ -135,8 +180,9 @@ const ExaminationPage = ({ navigation }) => {
       });
       const data = await response.json();
       if (response.ok) {
-        // setExamData((prevData) => [...prevData, ...data]);
         setModalVisible1(false);
+        handleSubmit();
+        setNewExams([]);
         Alert.alert('Success', 'Examinations created successfully');
       } else {
         throw new Error('Failed to create examinations');
@@ -150,14 +196,6 @@ const ExaminationPage = ({ navigation }) => {
   const formatDate = (date) => {
     const d = new Date(date);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  };
-  const defaultExamValues = {
-    class: selectedClass,
-    subject: '',
-    date: new Date(),
-    examType: '',
-    time: new Date(),
-    endTime: new Date(),
   };
 
   const formatTime = (time) => {
@@ -173,20 +211,20 @@ const ExaminationPage = ({ navigation }) => {
 
   useEffect(() => {
     if (selectedClass && selectedExamType) {
-      handleSubmit()
+      handleSubmit();
     }
-  }, [selectedClass, selectedExamType])
+  }, [selectedClass, selectedExamType]);
 
   const formatTimeRange = (startTime, endTime) => {
     return `${formatTime(startTime)} to ${formatTime(endTime)}`;
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.tableRow}>
+    <TouchableOpacity style={styles.tableRow} onPress={() => handleRowClick(item)}>
       <Text style={styles.tableCell}>{item.subject}</Text>
       <Text style={styles.tableCell}>{item.date}</Text>
       <Text style={styles.tableCell}>{item.time}</Text>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -198,43 +236,121 @@ const ExaminationPage = ({ navigation }) => {
         label="Select Class"
         options={['Class 1', 'Class 2', 'Class 3', 'Class 10', 'Class 12']}
         onSelect={handleClassChange}
-        disabled={!!selectedClass}
+        disabled={false}
       />
-      {showBranchDropdown && (
-        <Dropdown
-          label="Select Branch"
-          options={selectedClass && demoData[selectedClass] ? Object.keys(demoData[selectedClass]) : []}
-          onSelect={handleBranchChange}
-        />
-      )}
       {showExamTypeDropdown && (
         <Dropdown
           label="Select Exam Type"
           options={examTypes}
           onSelect={handleExamTypeChange}
+          disabled={false}
         />
       )}
+
       {examData && (
-        <View style={styles.tableContainer}>
-          <Text style={styles.tableTitle}>Examination Schedule</Text>
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={styles.tableCellHeader}>Subject</Text>
+            <Text style={styles.tableCellHeader}>Date</Text>
+            <Text style={styles.tableCellHeader}>Time</Text>
+          </View>
           <FlatList
             data={examData}
-            keyExtractor={(item) => item.subject}
             renderItem={renderItem}
-            ListHeaderComponent={() => (
-              <View style={styles.tableHeader}>
-                <Text style={styles.tableCellHeader}>Subject</Text>
-                <Text style={styles.tableCellHeader}>Date</Text>
-                <Text style={styles.tableCellHeader}>Time</Text>
-              </View>
-            )}
+            keyExtractor={(item) => item.id}
           />
         </View>
       )}
+
       <TouchableOpacity style={styles.fab} onPress={() => setModalVisible1(true)}>
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
 
+      {/* Modal for editing */}
+      <Modal visible={modalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Examination</Text>
+            <Dropdown
+              label="Select Class"
+              options={['1', '2', '3', '10', '12']}
+              onSelect={(value) => setCurrentExam({ ...currentExam, class: value })}
+            // disabled={!!selectedClass}
+            />
+            {showExamTypeDropdown && (
+              <Dropdown
+                label="Select Exam Type"
+                options={examTypes}
+                onSelect={handleExamTypeChange}
+              />
+            )}
+            <TextInput
+              style={styles.input}
+              placeholder="Enter Subject"
+              value={currentExam.subject}
+              onChangeText={(text) => setCurrentExam({ ...currentExam, subject: text })}
+            />
+            <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.input}>{formatDate(currentExam.date)}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowTimePicker(true)}>
+              <Text style={styles.input}>{formatTime(currentExam.time)}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
+              <Text style={styles.input}>{formatTime(currentExam.endTime)}</Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={currentExam.date}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  const currentDate = selectedDate || currentExam.date;
+                  setShowDatePicker(false);
+                  setCurrentExam({ ...currentExam, date: currentDate });
+                }}
+              />
+            )}
+            {showTimePicker && (
+              <DateTimePicker
+                value={currentExam.time}
+                mode="time"
+                display="default"
+                onChange={(event, selectedTime) => {
+                  const currentTime = selectedTime || currentExam.time;
+                  setShowTimePicker(false);
+                  setCurrentExam({ ...currentExam, time: currentTime });
+                }}
+              />
+            )}
+            {showEndTimePicker && (
+              <DateTimePicker
+                value={currentExam.endTime}
+                mode="time"
+                display="default"
+                onChange={(event, selectedTime) => {
+                  const currentEndTime = selectedTime || currentExam.endTime;
+                  setShowEndTimePicker(false);
+                  setCurrentExam({ ...currentExam, endTime: currentEndTime });
+                }}
+              />
+            )}
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity style={styles.modalButton} onPress={handleSaveExam}>
+                <Text style={styles.modalButtonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalButton} onPress={() => {
+                setModalVisible(false);
+              }
+              }>
+                <Text style={styles.modalButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal for adding new exam */}
       <Modal visible={modalVisible1} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -312,7 +428,6 @@ const ExaminationPage = ({ navigation }) => {
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalButton} onPress={() => {
                 setModalVisible1(false);
-                setCurrentExam(defaultExamValues);
               }
               }>
                 <Text style={styles.modalButtonText}>Close</Text>
@@ -335,6 +450,7 @@ const ExaminationPage = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
     </View>
   );
 };
@@ -346,33 +462,43 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    marginBottom: '10%',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
   },
-  dropdown: {
-    marginVertical: 10,
-  },
   dropdownButton: {
-    padding: 10,
-    backgroundColor: '#ddd',
-    borderRadius: 5,
+    // position: 'relative',
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginBottom: 20,
   },
-  dropdownButtonText: {
+  dropdown: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  dropdownLabel: {
     fontSize: 16,
   },
   dropdownOptions: {
+    // position: 'absolute',
     backgroundColor: '#fff',
-    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
     marginTop: 5,
-    padding: 10,
   },
   dropdownOption: {
-    padding: 10,
-  },
-  dropdownOptionText: {
-    fontSize: 16,
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
   },
   tableContainer: {
     marginTop: 20,
@@ -386,8 +512,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#ddd',
     padding: 10,
+    borderRadius: 5,
+    marginBottom: 5,
+  },
+  tableCellHeader: {
+    flex: 1,
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
   tableRow: {
+    borderRadius: 5,
+    borderWidth: 1,
+    margin: 2,
     flexDirection: 'row',
     padding: 10,
   },
@@ -409,7 +545,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 20,
-    backgroundColor: '#000',
+    backgroundColor: '#567BC2',
     borderRadius: 30,
     width: 60,
     height: 60,
@@ -450,7 +586,7 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     padding: 10,
-    backgroundColor: '#007BFF',
+    backgroundColor: '#567BC2',
     borderRadius: 5,
   },
   modalButtonText: {
